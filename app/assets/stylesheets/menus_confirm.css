@@ -1,0 +1,11 @@
+.menu-confirm-image {
+  /* height: 500px;
+  object-fit: cover; */
+  height: auto;
+  display: block;
+  margin: 0 auto 15px;
+}
+
+.card-body h2.card-title {
+  font-size: 2.5rem;
+}

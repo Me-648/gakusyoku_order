@@ -1,0 +1,258 @@
+<%
+=begin%>
+ <% content_for :head_css do %>
+  <%= stylesheet_link_tag 'menus_confirm', media: 'all', 'data-turbo-track': 'reload' %>
+<% end %>
+
+<div class="card position-relative">
+  <div class="card-body text-center">
+    <%= image_tag(@menu.image_url, class: "card-img-top menu-confirm-image") if @menu.image_url.present? %>
+
+    <div class="card-body">
+      <h2 class="card-title"><%= @menu.name %></h2>
+      <p class="card-text"><%= @menu.price %>円</p>
+    </div>
+
+    <div class="d-flex justify-content-center mt-4 gap-3">
+      <%= link_to "戻る", menus_path, class: "btn btn-secondary" %>
+      <%# モーダルを呼び出すためのボタンに変更 %>
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#orderModal">
+        注文する
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderModalLabel">注文する</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+      </div>
+      <div class="modal-body">
+        <%= form_with url: orders_path, method: :post, scope: :order do |f| %>
+          <div class="mb-3">
+            <%= f.label :student_id, '生徒番号を入力：' %>
+            <%= f.text_field :student_id, class: "form-control", required: true %>
+          </div>
+
+          <p><%= @menu.name %>：<%= @menu.price %>円×1</p>
+          <p>注文しますか？</p>
+
+          <%= f.hidden_field :menu_id, value: @menu.id %>
+          <%= f.hidden_field :menu_name, value: @menu.name %>
+          <%= f.hidden_field :menu_price, value: @menu.price %>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">戻る</button>
+            <%= f.submit "注文", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<%
+=end%>
+
+<% content_for :head_css do %>
+  <%= stylesheet_link_tag 'menus_confirm', media: 'all', 'data-turbo-track': 'reload' %>
+<% end %>
+
+<div class="card position-relative">
+  <div class="card-body text-center">
+    <div class="d-flex justify-content-center">
+      <div class="image-container" style="max-width: 400px;">
+        <%= image_tag(@menu.image_url, class: "card-img-top menu-confirm-image img-fluid") if @menu.image_url.present? %>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <h2 class="card-title"><%= @menu.name %></h2>
+      <p class="card-text fs-3"><%= @menu.price %>円</p>
+      <% if @menu.description.present? %>
+        <p class="card-text text-muted small"><%= simple_format(@menu.description) %></p>
+      <% end %>
+    </div>
+
+    <div class="d-flex justify-content-center mt-4 gap-3">
+      <%= link_to "戻る", menus_path, class: "btn btn-secondary" %>
+      <%# モーダルを呼び出すためのボタン %>
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#orderUnifiedModal">
+        注文する
+      </button>
+    </div>
+  </div>
+</div>
+
+<%# 統合された単一のモーダル %>
+<div class="modal fade" id="orderUnifiedModal" tabindex="-1" aria-labelledby="orderUnifiedModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <%# モーダルのヘッダーは共通または動的に変更 %>
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderUnifiedModalLabel">注文する</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+      </div>
+
+      <div class="modal-body">
+        <%# === 生徒番号入力フォームのセクション === %>
+        <div id="orderInputSection">
+          <div id="orderErrors" class="alert alert-danger" style="display: none;"></div> <%# エラーメッセージ表示用div %>
+          <%= form_tag orders_path, method: :post, id: "orderForm" do %>
+            <div class="mb-3">
+              <%= label_tag :student_id, '生徒番号を入力：' %>
+              <%# text_field_tag に id を明示的に指定 %>
+              <%= text_field_tag :student_id, nil, class: "form-control", required: true, id: 'student_id' %>
+            </div>
+
+            <p><%= @menu.name %>：<%= @menu.price %>円×1</p>
+            <p>注文しますか？</p>
+
+            <%= hidden_field_tag :menu_id, @menu.id %>
+            <%= hidden_field_tag :menu_name, @menu.name %>
+            <%= hidden_field_tag :menu_price, @menu.price %>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">戻る</button>
+              <button type="button" class="btn btn-primary" id="confirmOrderBtn">注文</button>
+            </div>
+          <% end %>
+        </div>
+
+        <%# === 注文完了メッセージのセクション === %>
+        <div id="orderCompleteSection" style="display: none;"> <%# 初期状態は非表示 %>
+          <div class="text-center">
+            <h3>注文が完了しました</h3>
+            <p>学食をご利用いただきありがとうございます。</p>
+            <p>注文内容は「注文を確認する」から確認できます。</p>
+          </div>
+        </div>
+      </div>
+      <%# 注文完了セクション用のフッターはJSで表示を制御 %>
+      <div class="modal-footer justify-content-center" id="orderCompleteFooter" style="display: none;">
+        <%= link_to "戻る", menus_path, class: "btn btn-secondary" %>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  document.addEventListener('turbo:load', function() {
+    // モーダル全体の要素
+    const orderUnifiedModalElement = document.getElementById('orderUnifiedModal');
+    const orderUnifiedModal = new bootstrap.Modal(orderUnifiedModalElement);
+
+    // モーダルの各セクション
+    const orderInputSection = document.getElementById('orderInputSection');
+    const orderCompleteSection = document.getElementById('orderCompleteSection');
+    const modalTitle = document.getElementById('orderUnifiedModalLabel');
+    const orderCompleteFooter = document.getElementById('orderCompleteFooter');
+
+    // フォーム関連要素
+    const orderForm = document.getElementById('orderForm');
+    const confirmOrderBtn = document.getElementById('confirmOrderBtn');
+    const orderErrorsDiv = document.getElementById('orderErrors');
+
+    // モーダルが開かれたときの処理（初期状態に戻す）
+    orderUnifiedModalElement.addEventListener('show.bs.modal', function () {
+      orderInputSection.style.display = 'block'; // 入力フォームを表示
+      orderCompleteSection.style.display = 'none'; // 完了メッセージを非表示
+      orderCompleteFooter.style.display = 'none'; // 完了フッターを非表示
+
+      modalTitle.textContent = '注文する'; // タイトルを「注文する」に戻す
+      orderForm.reset(); // フォームをリセット
+
+      orderErrorsDiv.style.display = 'none'; // エラーメッセージを非表示に
+      orderErrorsDiv.innerHTML = ''; // エラーメッセージをクリア
+      orderUnifiedModalElement.querySelector('.btn-close').style.display = 'block'; // 閉じるボタンを再表示
+    });
+
+    // === ここに新しいイベントリスナーを追加 ===
+    orderForm.addEventListener('submit', function(event) {
+      event.preventDefault(); // フォームのデフォルト送信動作をキャンセル
+      // この後、confirmOrderBtnのクリックイベントで実行されるロジックを呼び出すか、
+      // ここに直接ロジックを記述します。今回は既存のロジックを呼び出す形にします。
+      confirmOrderBtn.click(); // 「注文」ボタンのクリックイベントをトリガー
+    });
+    // ===========================================
+
+    // 注文ボタンのクリックイベント
+    confirmOrderBtn.addEventListener('click', function() {
+      // エラーメッセージをクリア
+      orderErrorsDiv.style.display = 'none';
+      orderErrorsDiv.innerHTML = '';
+
+      // student_id の値を取得
+      const studentId = document.getElementById('student_id').value;
+
+      // クライアントサイドでのバリデーション
+      if (!studentId || studentId.length !== 4 || !/^\d+$/.test(studentId)) {
+        orderErrorsDiv.innerHTML = '生徒番号は4桁の半角数字で入力してください。';
+        orderErrorsDiv.style.display = 'block';
+        return; // これ以上処理を進めない
+      }
+
+      // フォームデータの準備 (FormDataから必要な値を手動で取得し、ネストしたオブジェクトを作成)
+      const formData = new FormData(orderForm);
+      const orderData = {
+          student_id: formData.get('student_id'),
+          menu_id: formData.get('menu_id'),
+          menu_name: formData.get('menu_name'),
+          menu_price: formData.get('menu_price')
+      };
+
+      // サーバーに注文データをAJAXで送信
+      fetch('<%= orders_path %>', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // JSON形式で送ることを宣言
+          'X-CSRF-Token': '<%= form_authenticity_token %>'
+        },
+        body: JSON.stringify({ order: orderData }) // order: でネストさせる
+      })
+      .then(response => {
+        if (!response.ok) { // HTTPステータスコードが200番台以外の場合 (例: 422 Unprocessable Entity)
+          return response.json().then(errorData => {
+            // エラーメッセージがあればそれを使用、なければ一般的なメッセージ
+            throw new Error(errorData.errors ? errorData.errors.join('<br>') : '注文に失敗しました。');
+          });
+        }
+        return response.json(); // 成功レスポンスをJSONとしてパース
+      })
+      .then(data => {
+        if (data.success) {
+          // 成功時: モーダルの中身を完了メッセージに切り替え
+          orderInputSection.style.display = 'none'; // 入力フォームを非表示
+          orderCompleteSection.style.display = 'block'; // 完了メッセージを表示
+          orderCompleteFooter.style.display = 'flex'; // 完了フッターを表示 (flexboxを使うため)
+
+          modalTitle.textContent = '注文が完了しました'; // タイトルを「注文が完了しました」に
+          orderUnifiedModalElement.querySelector('.btn-close').style.display = 'none'; // 右上の閉じるボタンを非表示に
+        } else {
+          // ここは、response.okがfalseでなければ実行されないはず
+          // 万が一のため（サーバーからの成功レスポンスにsuccess: falseが含まれるなど）
+          orderErrorsDiv.innerHTML = '不明なエラー: 注文に失敗しました。';
+          orderErrorsDiv.style.display = 'block';
+        }
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        orderErrorsDiv.innerHTML = 'エラーが発生しました:<br>' + error.message; // エラーメッセージを表示
+        orderErrorsDiv.style.display = 'block';
+        // モーダルは閉じないで、ユーザーにエラーを見せる
+      });
+    });
+
+    // モーダルが完全に閉じられた後の処理（メニュー一覧に戻るなど）
+    orderUnifiedModalElement.addEventListener('hidden.bs.modal', function () {
+      // 注文完了セクションが表示されていた場合（つまり注文が成功した場合）のみリダイレクト
+      if (orderCompleteSection.style.display === 'block') {
+        window.location.href = "<%= menus_path %>";
+      }
+    });
+  });
+</script>
